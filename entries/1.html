@@ -1,0 +1,14 @@
+#Unicode bugs, json v ujson edition
+
+had some not so much fun today debugging an issue with a python lib called 'autobahn' that was dying on some encoding.
+
+Long story somewwhat short, json and ujson *should* behave the same. Just like JSON::XS and JSON::PP, etc, have the same options and behavior.
+
+Where they don't they should at least behave differently for non-surprising circumstances; say, if one had certain options the other didn't support.
+
+https://github.com/esnme/ultrajson/issues/23 is a lesson in what not to do.
+
+The maintainer starts with a feature that json has, `ensure_ascii=False`, and changes it mean something similar but not.
+With json it outputs python unicode strings, with ujson it outputs UTF-8 encoded text.
+
+autobahn had a feature that tried to helpfully import ujson if it was available and then degrade to regular json.

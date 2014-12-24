@@ -14,15 +14,24 @@ import (
 )
 
 type BlogEngine struct {
-	wrapper *template.Template
+    wrapper_filepath string
+	_wrapper *template.Template
 }
 
-func (b *BlogEngine) loadWrapper(filename string) {
-	wrapper, err := template.New("wrapper").Parse(fileToString(filename))
+func (b *BlogEngine) _build_wrapper() *template.Template {
+	wrapper, err := template.New("wrapper").Parse(fileToString(b.wrapper_filepath))
 	if err != nil {
 		log.Fatal(err)
 	}
-	b.wrapper = wrapper
+    return wrapper
+}
+
+func (b *BlogEngine) wrapper() *template.Template {
+    if b._wrapper != nil {
+        return b._wrapper
+    }
+    b._wrapper = b._build_wrapper()
+    return b._wrapper
 }
 
 func (b *BlogEngine) HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +51,7 @@ func (b *BlogEngine) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	writer := bufio.NewWriter(&buff)
 	p.Markdown(file, markdown.ToHTML(writer))
 	writer.Flush()
-	b.render(w, string(buff.Bytes()))
+	b.render(w, buff.String())
 }
 
 type blogEntry struct {
@@ -51,7 +60,7 @@ type blogEntry struct {
 
 func (b *BlogEngine) render(out io.Writer, content string) {
 	entry := blogEntry{Content: template.HTML(content)}
-	b.wrapper.Execute(out, entry)
+	b.wrapper().Execute(out, entry)
 }
 
 func fileToString(filename string) string {
@@ -73,8 +82,7 @@ func entry_filename(title string) string {
 
 
 func main() {
-	b := BlogEngine{}
-	b.loadWrapper("root/templates/html/wrapper.html")
+	b := BlogEngine{wrapper_filepath:"root/templates/html/wrapper.html"}
 	r := mux.NewRouter()
 	r.HandleFunc("/blog/entry/{title}-{entry_id:[0-9]+}", b.HomeHandler)
 	http.Handle("/", r)
